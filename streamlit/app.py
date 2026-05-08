@@ -6,7 +6,9 @@ from plotly.subplots import make_subplots
 import numpy as np
 import os
 
+# ─────────────────────────────────────────────
 # PAGE CONFIG
+# ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Egypt Financial Dashboard",
     page_icon="🇪🇬",
@@ -14,8 +16,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
+# ─────────────────────────────────────────────
 # THEME / CSS
+# ─────────────────────────────────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -94,7 +97,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────
 # CHART DEFAULTS
+# ─────────────────────────────────────────────
 CHART_BG   = "#0d1117"
 PAPER_BG   = "#0d1117"
 GRID_COLOR = "#21262d"
@@ -115,14 +120,16 @@ def base_layout(title="", height=400, **kw):
         **kw
     )
 
+# ─────────────────────────────────────────────
 # DATA LOADERS
+# ─────────────────────────────────────────────
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 @st.cache_data
 def load_all():
     data = {}
 
-    # Inflation (CBE xlsx)
+    # --- Inflation (CBE xlsx) ---
     inf = pd.read_excel(os.path.join(DATA_DIR, "egy_cbe_inflation_rate.xlsx"), header=None)
     inf.columns = ["date","headline","core","regulated","fruits_veg"]
     inf = inf[inf["date"].astype(str).str.strip() != "Date"].copy()
@@ -133,7 +140,7 @@ def load_all():
         inf[c] = pd.to_numeric(inf[c], errors="coerce")
     data["inflation"] = inf
 
-    # EGP/USD CBE xlsx
+    # --- EGP/USD CBE xlsx ---
     egp = pd.read_excel(os.path.join(DATA_DIR, "egy_cbe_egpusd_rate.xlsx"), header=None)
     egp.columns = ["date","rate"]
     egp = egp[egp["date"].astype(str).str.strip() != "Date"].copy()
@@ -142,14 +149,14 @@ def load_all():
     egp = egp.dropna().sort_values("date").reset_index(drop=True)
     data["egpusd"] = egp
 
-    # CPI 
+    # --- CPI ---
     cpi = pd.read_csv(os.path.join(DATA_DIR, "egy_cpi.csv"))
     cpi.columns = ["year","cpi"]
     cpi["year"] = pd.to_numeric(cpi["year"], errors="coerce")
     cpi = cpi.dropna().sort_values("year").reset_index(drop=True)
     data["cpi"] = cpi
 
-    # Egyptian Gold (raw format from investing.com)
+    # --- Egyptian Gold (raw format from investing.com) ---
     eg_gold = pd.read_csv(os.path.join(DATA_DIR, "egy_gold_prices.csv"))
     # Normalise column names whether raw or cleaned
     eg_gold.columns = eg_gold.columns.str.strip()
@@ -189,14 +196,14 @@ def load_all():
         df = df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
         return df
 
-    # Global Gold
+    # --- Global Gold ---
     data["global_gold"] = load_yf_csv(os.path.join(DATA_DIR, "global_gold_prices.csv"))
 
-    # Oil prices
+    # --- Oil prices ---
     data["brent"] = load_yf_csv(os.path.join(DATA_DIR, "global_brent_oil_prices.csv"))
     data["wti"]   = load_yf_csv(os.path.join(DATA_DIR, "global_wti_price_prices.csv"))
 
-    # OPEC (monthly, may not have date column)
+    # --- OPEC (monthly, may not have date column) ---
     opec_raw = pd.read_csv(os.path.join(DATA_DIR, "opec_oil_prices.csv"))
     opec_raw.columns = opec_raw.columns.str.strip()
     # Rename date column if present
@@ -217,7 +224,7 @@ def load_all():
     budget_brent.columns = budget_brent.columns.str.strip()
     data["budget_brent"] = budget_brent
 
-    # Subsidies
+    # --- Subsidies ---
     elec = pd.read_excel(os.path.join(DATA_DIR, "egy_subsidies_on_electricity_expected_vs_actual.xlsx"))
     elec.columns = ["year","planned_elec","actual_elec"]
     elec["year"] = elec["year"].astype(str).str.strip()
@@ -228,7 +235,7 @@ def load_all():
     petro["year"] = petro["year"].astype(str).str.strip()
     data["sub_petro"] = petro
 
-    # FX rates (raw yfinance or cleaned)
+    # --- FX rates (raw yfinance or cleaned) ---
     fx_files = {
         "EUR/USD": "global_eurusd_rate_prices.csv",
         "GBP/USD": "global_gbpusd_rate_prices.csv",
@@ -247,7 +254,9 @@ def load_all():
 
 data = load_all()
 
+# ─────────────────────────────────────────────
 # SIDEBAR
+# ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🇪🇬 Egypt Finance")
     st.markdown("**Gold & Oil Prediction System**")
@@ -271,15 +280,19 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<small style='color:#444'>Egypt Macroeconomic Intelligence</small>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────
 # HELPER: filter by date
+# ─────────────────────────────────────────────
 def filt(df, col="date"):
     if col in df.columns:
         return df[(df[col] >= date_start) & (df[col] <= date_end)]
     return df
 
-#  PAGES
+# ─────────────────────────────────────────────
+# ══════════════ PAGES ════════════════════════
+# ─────────────────────────────────────────────
 
-# OVERVIEW
+# ── OVERVIEW ──────────────────────────────────
 if page == "🏠 Overview":
     st.markdown('<div class="page-title"><span class="page-title-icon">🇪🇬</span><span class="page-title-text">Egypt Financial Dashboard</span><span class="page-title-sub">Macroeconomic &amp; Market Data · 2016 – 2026</span></div>', unsafe_allow_html=True)
     st.markdown("<p>Macroeconomic & Market Data · 2016 – 2026</p>", unsafe_allow_html=True)
@@ -383,9 +396,12 @@ if page == "🏠 Overview":
         fig4.add_trace(go.Scatter(x=of["date"], y=of["price_usd"], name="OPEC",  line=dict(color=COLORS[2], width=1.5)))
         fig4.update_layout(**base_layout(height=300))
         st.plotly_chart(fig4, use_container_width=True)
-        st.caption("⚠️ ملاحظة: السعر السالب لـ WTI في أبريل 2020 حقيقي وليس خطأ في البيانات — حدث بسبب انهيار الطلب العالمي خلال أزمة كوفيد-19 وامتلاء خزانات التخزين.")
+        st.markdown('''<div style="background:linear-gradient(90deg,#1a1a2e,#16213e);border-left:4px solid #e3b341;border-radius:8px;padding:0.7rem 1rem;margin-top:0.5rem;">
+        <span style="color:#e3b341;font-weight:700;">⚠️ Data Note — WTI Negative Price (April 2020)</span><br>
+        <span style="color:#c9d1d9;font-size:0.85rem;">The negative WTI price in April 2020 is real market data, not an error. It occurred due to a historic collapse in global demand during the COVID-19 pandemic combined with storage capacity reaching its limit.</span>
+    </div>''', unsafe_allow_html=True)
 
-# INFLATION & CPI
+# ── INFLATION & CPI ────────────────────────────
 elif page == "📈 Inflation & CPI":
     st.markdown('<div class="page-title"><span class="page-title-icon">📈</span><span class="page-title-text">Inflation &amp; CPI</span><span class="page-title-sub">CBE Monthly · IMF Annual · Heatmap Analysis</span></div>', unsafe_allow_html=True)
 
@@ -453,7 +469,7 @@ elif page == "📈 Inflation & CPI":
             use_container_width=True, hide_index=True
         )
 
-# EXCHANGE RATES
+# ── EXCHANGE RATES ─────────────────────────────
 elif page == "💱 Exchange Rates":
     st.markdown('<div class="page-title"><span class="page-title-icon">💱</span><span class="page-title-text">Exchange Rates</span><span class="page-title-sub">EGP/USD Official Rate · Global FX Comparison</span></div>', unsafe_allow_html=True)
 
@@ -540,7 +556,7 @@ elif page == "💱 Exchange Rates":
                     })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-# GOLD PRICES
+# ── GOLD PRICES ────────────────────────────────
 elif page == "🥇 Gold Prices":
     st.markdown('<div class="page-title"><span class="page-title-icon">🥇</span><span class="page-title-text">Gold Prices</span><span class="page-title-sub">Egyptian EGP · Global USD · Candlestick Charts</span></div>', unsafe_allow_html=True)
 
@@ -603,7 +619,7 @@ elif page == "🥇 Gold Prices":
         fig3.update_layout(**base_layout(height=380))
         st.plotly_chart(fig3, use_container_width=True)
 
-# OIL PRICES
+# ── OIL PRICES ─────────────────────────────────
 elif page == "🛢️ Oil Prices":
     st.markdown('<div class="page-title"><span class="page-title-icon">🛢️</span><span class="page-title-text">Oil Prices</span><span class="page-title-sub">Brent · WTI · OPEC Basket · Egypt Budget</span></div>', unsafe_allow_html=True)
 
@@ -625,7 +641,15 @@ elif page == "🛢️ Oil Prices":
         fig.update_yaxes(tickprefix="$")
         fig.update_layout(**base_layout(height=430))
         st.plotly_chart(fig, use_container_width=True)
-        st.info("⚠️ **ملاحظة:** السعر السالب لـ WTI في أبريل 2020 حقيقي وليس خطأ في البيانات — حدث بسبب انهيار الطلب العالمي خلال أزمة كوفيد-19 وامتلاء خزانات التخزين بشكل غير مسبوق.")
+        st.markdown('''<div style="background:linear-gradient(90deg,#1a1a2e,#16213e);border-left:4px solid #e3b341;border-radius:8px;padding:0.9rem 1.2rem;margin-top:0.5rem;">
+        <span style="color:#e3b341;font-weight:700;font-size:0.95rem;">⚠️ Data Note — WTI Negative Price (April 2020)</span><br><br>
+        <span style="color:#c9d1d9;font-size:0.88rem;">
+        The negative WTI crude oil price recorded in April 2020 (<b style="color:#f85149;">−$37.63/bbl</b>) is <b>real and accurate market data</b> — not an error in the dataset.<br><br>
+        This unprecedented event was caused by two simultaneous shocks:<br>
+        &nbsp;&nbsp;🦠 <b>Demand Shock:</b> Global COVID-19 lockdowns caused oil demand to collapse virtually overnight.<br>
+        &nbsp;&nbsp;🏭 <b>Supply Glut:</b> Physical storage facilities reached full capacity, forcing sellers to pay buyers to take delivery of oil contracts.
+        </span>
+    </div>''', unsafe_allow_html=True)
 
         # Spread
         st.markdown('<div class="section-header">Brent – WTI Spread (USD)</div>', unsafe_allow_html=True)
@@ -657,7 +681,7 @@ elif page == "🛢️ Oil Prices":
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(bb, use_container_width=True, hide_index=True)
 
-# BUDGET & SUBSIDIES
+# ── BUDGET & SUBSIDIES ─────────────────────────
 elif page == "💰 Budget & Subsidies":
     st.markdown('<div class="page-title"><span class="page-title-icon">💰</span><span class="page-title-text">Budget &amp; Subsidies</span><span class="page-title-sub">Petroleum · Electricity · Planned vs Actual</span></div>', unsafe_allow_html=True)
 
@@ -738,7 +762,7 @@ elif page == "💰 Budget & Subsidies":
                                 title=dict(text=f"{label} ({yr})", font=dict(color=FONT_COLOR)))
             col.plotly_chart(figP, use_container_width=True)
 
-# CORRELATIONS
+# ── CORRELATIONS ───────────────────────────────
 elif page == "🔗 Correlations":
     st.markdown('<div class="page-title"><span class="page-title-icon">🔗</span><span class="page-title-text">Correlation Analysis</span><span class="page-title-sub">Matrix · Scatter · Dual-Axis Time Series</span></div>', unsafe_allow_html=True)
 
@@ -808,7 +832,7 @@ elif page == "🔗 Correlations":
     figD.update_yaxes(title_text=y_var, gridcolor=GRID_COLOR, secondary_y=True)
     st.plotly_chart(figD, use_container_width=True)
 
-# AI MODEL
+# ── AI MODEL ───────────────────────────────────
 elif page == "🤖 AI Model":
     import pickle, warnings
     warnings.filterwarnings("ignore")
@@ -905,7 +929,7 @@ elif page == "🤖 AI Model":
 
         return pd.DataFrame(predictions)
 
-    tab_gold, tab_oil = st.tabs(["🥇 Gold Prediction", "🛢️ Oil Prediction"])
+    tab_gold, tab_oil, tab_perf = st.tabs(["🥇 Gold Prediction", "🛢️ Oil Prediction", "📊 Model Performance"])
 
     with tab_gold:
         if "gold" in ai_models:
@@ -1005,3 +1029,118 @@ elif page == "🤖 AI Model":
                          use_container_width=True, hide_index=True)
         else:
             st.warning("Oil model file not found.")
+
+    with tab_perf:
+        import base64
+        from pathlib import Path
+
+        def img_to_b64(path):
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+
+        DATA_DIR_AI = os.path.dirname(os.path.abspath(__file__))
+
+        # ── Gold Model Performance ─────────────────────
+        st.markdown('<div class="section-header">🥇 Gold Price Forecasting — Model Results</div>', unsafe_allow_html=True)
+
+        # Gold metrics
+        k1, k2, k3, k4 = st.columns(4)
+        with k1:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">MAE — Top-15</div>
+                <div class="kpi-value" style="font-size:1.4rem;">$159.5</div>
+                <div class="kpi-delta-pos">Full Model: $284.2</div>
+            </div>""", unsafe_allow_html=True)
+        with k2:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">RMSE — Top-15</div>
+                <div class="kpi-value" style="font-size:1.4rem;">$181.8</div>
+                <div class="kpi-delta-pos">Full Model: $310.7</div>
+            </div>""", unsafe_allow_html=True)
+        with k3:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">R² — Top-15</div>
+                <div class="kpi-value" style="font-size:1.4rem;">0.500</div>
+                <div class="kpi-delta-neg">Full Model: -0.462</div>
+            </div>""", unsafe_allow_html=True)
+        with k4:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">MAPE — Top-15</div>
+                <div class="kpi-value" style="font-size:1.4rem;">3.30%</div>
+                <div class="kpi-delta-pos">Full Model: 5.80%</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("")
+        gold_img_path = os.path.join(DATA_DIR_AI, "gold_price_prediction_model.png")
+        if os.path.exists(gold_img_path):
+            st.image(gold_img_path, use_container_width=True,
+                     caption="Gold Price Forecasting — Actual vs Predicted (Jan–Apr 2026)")
+        else:
+            st.warning("gold_price_prediction_model.png not found in app folder.")
+
+        st.markdown("")
+
+        # ── Oil Model Performance ──────────────────────
+        st.markdown('<div class="section-header">🛢️ Brent Oil Forecasting — Model Results</div>', unsafe_allow_html=True)
+
+        k1, k2, k3, k4 = st.columns(4)
+        with k1:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">MAE — Top-20</div>
+                <div class="kpi-value" style="font-size:1.4rem;">$5.41</div>
+                <div class="kpi-delta-pos">Full Model: $11.19</div>
+            </div>""", unsafe_allow_html=True)
+        with k2:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">RMSE — Top-20</div>
+                <div class="kpi-value" style="font-size:1.4rem;">$7.35</div>
+                <div class="kpi-delta-pos">Full Model: $14.39</div>
+            </div>""", unsafe_allow_html=True)
+        with k3:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">R² — Top-20</div>
+                <div class="kpi-value" style="font-size:1.4rem;">0.843</div>
+                <div class="kpi-delta-pos">Full Model: 0.398</div>
+            </div>""", unsafe_allow_html=True)
+        with k4:
+            st.markdown("""<div class="kpi-card">
+                <div class="kpi-label">MAPE — Top-20</div>
+                <div class="kpi-value" style="font-size:1.4rem;">5.79%</div>
+                <div class="kpi-delta-pos">Full Model: 11.64%</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("")
+        oil_img_path = os.path.join(DATA_DIR_AI, "oil_price_prediction_model.png")
+        if os.path.exists(oil_img_path):
+            st.image(oil_img_path, use_container_width=True,
+                     caption="Brent Oil Forecasting — Actual vs Predicted (Jan–Apr 2026)")
+        else:
+            st.warning("oil_price_prediction_model.png not found in app folder.")
+
+        st.markdown("")
+
+        # ── Correlation Heatmap ────────────────────────
+        st.markdown('<div class="section-header">🔗 Feature Correlation Heatmap</div>', unsafe_allow_html=True)
+        corr_img_path = os.path.join(DATA_DIR_AI, "correlation_heatmap.png")
+        if os.path.exists(corr_img_path):
+            st.image(corr_img_path, use_container_width=True,
+                     caption="Correlation Matrix — All Model Features")
+        else:
+            st.warning("correlation_heatmap.png not found in app folder.")
+
+        st.markdown("")
+
+        # ── Model Comparison Table ─────────────────────
+        st.markdown('<div class="section-header">📋 Model Comparison Summary</div>', unsafe_allow_html=True)
+        import pandas as pd
+        comparison = pd.DataFrame({
+            "Asset":      ["Gold", "Gold", "Oil", "Oil"],
+            "Model":      ["Top-15 Features", "Full Features", "Top-20 Features", "Full Features"],
+            "MAE":        ["$159.5", "$284.2", "$5.41", "$11.19"],
+            "RMSE":       ["$181.8", "$310.7", "$7.35", "$14.39"],
+            "R²":         ["0.500", "-0.462", "0.843", "0.398"],
+            "MAPE":       ["3.30%", "5.80%", "5.79%", "11.64%"],
+            "Winner":     ["✅", "❌", "✅", "❌"],
+        })
+        st.dataframe(comparison, use_container_width=True, hide_index=True)
+        st.caption("✅ Top-feature models outperform full-feature models on all metrics — less overfitting, better generalization.")
